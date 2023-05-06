@@ -2,6 +2,7 @@ from matplotlib import pyplot as plt
 from copy import deepcopy
 from typing import List
 
+import seaborn as sns
 import pandas as pd
 import numpy as np
 
@@ -12,13 +13,19 @@ import os
 from statistics import mean, mode, median
 
 
-def statistical_analysis(values, label):
+def statistical_analysis(values, label, show: bool = True):
     s = ""
     s += "*" * 50 + "\n"
     s += f"label: {label}" + "\n"
     s += f"mean: {round(mean(values), 2)}" + "\n"
     s += f"mode: {round(mode(values), 2)}" + "\n"
     s += f"median: {round(median(values), 2)}" + "\n"
+
+    plt.boxplot(values)
+    plt.title(label)
+    plt.savefig(f"plots/statistical_analysis_boxplot_{label}.png")
+    if show:
+        plt.show()
     with open(os.path.join("results", f"statistical_analysis_{label}.txt"), "w") as f:
         f.write(s)
     print(s)
@@ -47,6 +54,32 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
         load_jsons = True
         load_images = True
     train = pd.read_csv('data/train/train.csv')
+
+    print(f"Number of nan values: {train.isnull().sum()}")
+    show = False
+
+    def describe_nan(df):
+        return pd.DataFrame([(i, df[df[i].isna()].shape[0], df[df[i].isna()].shape[0] / df.shape[0]) for i in df.columns],
+                            columns=['column', 'nan_counts', 'nan_rate'])
+
+
+    nan_df = describe_nan(train)
+    nan_df.to_csv("results/nan_df.csv")
+    print(nan_df)
+
+    # replace nan values
+    train = train.fillna(method="ffill")
+
+    corr = train.corr()
+    sns.heatmap(corr, cmap="Blues", annot=True)
+    plt.savefig("plots/heatmap_correlations_between_variables.png")
+    if show:
+        plt.show()
+
+    all_columns_names = ['Type', 'Name', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3',
+                         'MaturitySize', 'FurLength', 'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity',
+                         'Fee', 'State', 'RescuerID', 'VideoAmt', 'Description', 'PetID', 'PhotoAmt', 'AdoptionSpeed']
+
     df = train
     AdoptionSpeed_list = df["AdoptionSpeed"].to_list()
     Type_list = df['Type'].to_list()
@@ -80,6 +113,14 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
         print(train.dtypes)
         print(train.describe(), len(train))
         print(train.head(n=1))
+
+    inspect_categorical = True
+    categorical_variables = []
+    if inspect_categorical:
+        for column in all_columns_names:
+            if len(train) > len(set(train[column].to_list())):
+                categorical_variables.append(column)
+        print(categorical_variables)
 
     train_metadata = [os.path.join('data/train_metadata', file) for file in os.listdir('data/train_metadata')]  # jsons
     initial_n = len(train_metadata)
@@ -294,10 +335,12 @@ def main():
     Color3_list = Color3_list_
     MaturitySize_list = MaturitySize_list_
     FurLength_list = FurLength_list_
+
     Vaccinated_list = Vaccinated_list_
     Dewormed_list = Dewormed_list_
     Sterilized_list = Sterilized_list_
     Health_list = Health_list_
+
     Quantity_list = Quantity_list_
     Fee_list = Fee_list_
     State_list = State_list_
@@ -307,15 +350,22 @@ def main():
     PetID_list = PetID_list_
     PhotoAmt_list = PhotoAmt_list_
     AdoptionSpeed_list = AdoptionSpeed_list_
+
     texts_list = texts_list_
     magnitudes_list = magnitudes_list_
     scores_list = scores_list_
     languages_list = languages_list_
     categories_list = categories_list_
+
     color_id_to_color_name = color_id_to_color_name_
     breed_id_to_breed_name = breed_id_to_breed_name_
     breed_id_to_type = breed_id_to_type_
     state_id_to_state_name = state_id_to_state_name_
+
+    # features_list = [Type_list, Name_list, Age_list, Breed1_list, Breed2_list, Gender_list, Color1_list, Color2_list,
+    #                  Color3_list, MaturitySize_list, FurLength_list, Vaccinated_list, Dewormed_list, Sterilized_list,
+    #                  Health_list, Quantity_list, Fee_list, State_list, RescuerID_list, VideoAmt_list, Description_list,
+    #                  PetID_list, PhotoAmt_list, AdoptionSpeed_list]
 
     print("Loaded data.")
     show = False
@@ -326,7 +376,7 @@ def main():
     def plot_histogram(values, label, nbins=100, show=True):
         plt.hist(values, bins=nbins)
         plt.title(label)
-        plt.savefig(os.path.join("plots", f"{label}.png"))
+        plt.savefig(os.path.join("plots", f"histogram_{label}.png"))
         if show:
             plt.show()
 
@@ -336,17 +386,67 @@ def main():
         plt.title(label)
         plt.xlabel(label.split("_by_")[0])
         plt.ylabel(label.split("_by_")[1])
-        plt.savefig(os.path.join("plots", f"{label}.png"))
+        plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
+        if show:
+            plt.show()
+
+
+    def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show=True):
+        plt.scatter(xvalues, yvalues, zvalues)
+        plt.title(label)
+        plt.xlabel(label.split("_by_")[0])
+        plt.ylabel(label.split("_by_")[1])
+        plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
         if show:
             plt.show()
 
     nbins = 100
 
+    def plot_barchart(labels, values, label: str, aggregation_strategy: str = "mean", show: bool = True):
+        label_to_average_value = dict()
+        for (label, value) in zip(labels, values):
+            if label not in label_to_average_value:
+                label_to_average_value[label] = [value]
+            else:
+                label_to_average_value[label].append(value)
+        for (label, value) in label_to_average_value.items():
+            if aggregation_strategy == "mean":
+                label_to_average_value[label] = mean(value)
+            elif aggregation_strategy == "sum":
+                label_to_average_value[label] = mean(value)
+            else:
+                raise Exception(f"Wrong aggregation_strategy given: {aggregation_strategy}!")
+
+        keys = label_to_average_value.keys()
+        values = label_to_average_value.values()
+        plt.bar(keys, values, color="red", width=0.4)
+        plt.xlabel(label.split("_by_")[0])
+        plt.ylabel(label.split("_by_")[1])
+        plt.title(label)
+        plt.savefig(os.path.join("plots", f"barchart_{label}.png"))
+        if show:
+            plt.show()
+
+    print("All the names: ", set(Name_list))
+
     plot_scatterplot(Age_list, AdoptionSpeed_list, label="Age_by_AdoptionSpeed", show=show)
     plot_scatterplot(MaturitySize_list, AdoptionSpeed_list, label="MaturitySize_by_AdoptionSpeed", show=show)
+    plot_scatterplot(Age_list, Color1_list, label="Age_by_Color", show=show)
+    plot_scatterplot(Breed1_list, AdoptionSpeed_list, label="Breed1_by_AdoptionSpeed", show=show)
+    plot_scatterplot(Breed2_list, AdoptionSpeed_list, label="Breed2_by_AdoptionSpeed", show=show)
+    plot_scatterplot(State_list, AdoptionSpeed_list, label="State_by_AdoptionSpeed", show=show)
 
+    plot_barchart(Gender_list, AdoptionSpeed_list, label="Gender_by_AdoptionSpeed", aggregation_strategy="mean", show=show)
+    plot_barchart(Color1_list, Type_list, label="Color_by_Type", aggregation_strategy="sum", show=show)
+    plot_barchart(Color1_list, AdoptionSpeed_list, label="Color_by_AdoptionSpeed", aggregation_strategy="sum", show=show)
+    plot_barchart(Type_list, AdoptionSpeed_list, label="Type_by_AdoptionSpeed", aggregation_strategy="mean", show=show)
 
+    plot_scatterplot_3D(Gender_list, Age_list, AdoptionSpeed_list, label="Gender_by_Age_by_AdoptionSpeed", show=show)
+    plot_scatterplot_3D(FurLength_list, Age_list, AdoptionSpeed_list, label="FurLength_by_Age_by_AdoptionSpeed", show=show)
+
+    plot_histogram(Fee_list, "Fee", nbins=nbins, show=show)
     plot_histogram(Age_list, "Age", nbins=nbins, show=show)
+    plot_histogram(Quantity_list, "Quantity", nbins=nbins, show=show)
     plot_histogram(AdoptionSpeed_list, "AdoptionSpeed", nbins=nbins, show=show)
 
     print(color_id_to_color_name.values())
@@ -355,7 +455,18 @@ def main():
     # print(list(breed_id_to_type.values())[0])
     print(state_id_to_state_name.values())
 
+    health_related_features_lists = np.array([Vaccinated_list, Dewormed_list, Sterilized_list, Health_list])
+    health_related_features_names = ["Vaccinated", "Dewormed", "Sterilized", "Health"]
+    for (health, health_features) in zip(health_related_features_names, [Vaccinated_list, Dewormed_list, Sterilized_list, Health_list]):
+        plot_scatterplot(health_features, AdoptionSpeed_list, label=f"{health}_by_AdoptionSpeed", show=show)
+
+    # plot the heatmap
+    import seaborn as sns
+    corr = health_related_features_lists.corr()
+    sns.heatmap(corr, xticklabels=health_related_features_names, yticklabels=health_related_features_names)
+
     print(set(Color1_list))
+
     print(set(Color2_list))
     print(set(Color3_list))
 
