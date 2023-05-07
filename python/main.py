@@ -1,6 +1,11 @@
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC, SVR
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, confusion_matrix
 from matplotlib import pyplot as plt
+from lazypredict.Supervised import LazyClassifier, LazyRegressor
 from copy import deepcopy
 from typing import List
+from collections import Counter
 
 import seaborn as sns
 import pandas as pd
@@ -11,6 +16,67 @@ import cv2
 import os
 
 from statistics import mean, mode, median
+
+all_columns_names = ['Type', 'Name', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3',
+                     'MaturitySize', 'FurLength', 'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity',
+                     'Fee', 'State', 'RescuerID', 'VideoAmt', 'Description', 'PetID', 'PhotoAmt', 'AdoptionSpeed']
+
+
+def plot_histogram(values, label, nbins=100, show=True):
+    plt.hist(values, bins=nbins)
+    plt.title(label)
+    plt.savefig(os.path.join("plots", f"histogram_{label}.png"))
+    if show:
+        plt.show()
+
+
+def plot_scatterplot(xvalues, yvalues, label, show=True):
+    plt.scatter(xvalues, yvalues)
+    plt.title(label)
+    plt.xlabel(label.split("_by_")[0])
+    plt.ylabel(label.split("_by_")[1])
+    plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
+    if show:
+        plt.show()
+
+
+def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show=True):
+    plt.scatter(xvalues, yvalues, zvalues)
+    plt.title(label)
+    plt.xlabel(label.split("_by_")[0])
+    plt.ylabel(label.split("_by_")[1])
+    plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
+    if show:
+        plt.show()
+
+
+nbins = 100
+
+
+def plot_barchart(labels, values, label: str, aggregation_strategy: str = "mean", show: bool = True):
+    label_to_average_value = dict()
+    for (label, value) in zip(labels, values):
+        if label not in label_to_average_value:
+            label_to_average_value[label] = [value]
+        else:
+            label_to_average_value[label].append(value)
+    for (label, value) in label_to_average_value.items():
+        if aggregation_strategy == "mean":
+            label_to_average_value[label] = mean(value)
+        elif aggregation_strategy == "sum":
+            label_to_average_value[label] = mean(value)
+        else:
+            raise Exception(f"Wrong aggregation_strategy given: {aggregation_strategy}!")
+
+    keys = label_to_average_value.keys()
+    values = label_to_average_value.values()
+    plt.bar(keys, values, color="red", width=0.4)
+    plt.xlabel(label.split("_by_")[0])
+    plt.ylabel(label.split("_by_")[1])
+    plt.title(label)
+    plt.savefig(os.path.join("plots", f"barchart_{label}.png"))
+    if show:
+        plt.show()
 
 
 def statistical_analysis(values, label, show: bool = True):
@@ -38,9 +104,19 @@ def read_jsons(filepaths: List[str]):
             datapoints.append(json.load(f))
     return datapoints
 
+from sentence_transformers import SentenceTransformer, util
+
+sent_transf_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+
+
+
+def encode_text(text: str):
+    return sent_transf_model.encode(text, convert_to_tensor=True)
+
+
 
 def read_data(load_jsons: bool = False, load_images: bool = False, load_all: bool = False, max_n: int = None,
-              do_prints: bool = True, use_test: bool=False):
+              do_prints: bool = True, use_test: bool = False):
     # sentiment related data
     texts_list = []
     magnitudes_list = []
@@ -62,7 +138,6 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
         return pd.DataFrame([(i, df[df[i].isna()].shape[0], df[df[i].isna()].shape[0] / df.shape[0]) for i in df.columns],
                             columns=['column', 'nan_counts', 'nan_rate'])
 
-
     nan_df = describe_nan(train)
     nan_df.to_csv("results/nan_df.csv")
     print(nan_df)
@@ -75,11 +150,6 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
     plt.savefig("plots/heatmap_correlations_between_variables.png")
     if show:
         plt.show()
-
-    all_columns_names = ['Type', 'Name', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3',
-                         'MaturitySize', 'FurLength', 'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity',
-                         'Fee', 'State', 'RescuerID', 'VideoAmt', 'Description', 'PetID', 'PhotoAmt', 'AdoptionSpeed']
-
     df = train
     AdoptionSpeed_list = df["AdoptionSpeed"].to_list()
     Type_list = df['Type'].to_list()
@@ -306,14 +376,35 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
         print(set(list(test.columns)).difference(set(list(train.columns))))
 
     return (Type_list, Name_list, Age_list, Breed1_list, Breed2_list, Gender_list, Color1_list, Color2_list, \
-        Color3_list, MaturitySize_list, FurLength_list, Vaccinated_list, Dewormed_list, Sterilized_list, \
-        Health_list, Quantity_list, Fee_list, State_list, RescuerID_list, VideoAmt_list, Description_list,\
-        PetID_list, PhotoAmt_list, AdoptionSpeed_list, texts_list, magnitudes_list, scores_list, languages_list, \
-        categories_list, color_id_to_color_name, breed_id_to_breed_name, breed_id_to_type, state_id_to_state_name)
+            Color3_list, MaturitySize_list, FurLength_list, Vaccinated_list, Dewormed_list, Sterilized_list, \
+            Health_list, Quantity_list, Fee_list, State_list, RescuerID_list, VideoAmt_list, Description_list, \
+            PetID_list, PhotoAmt_list, AdoptionSpeed_list, texts_list, magnitudes_list, scores_list, languages_list, \
+            categories_list, color_id_to_color_name, breed_id_to_breed_name, breed_id_to_type, state_id_to_state_name)
+
+
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+
+def load_scaler(scaling_option):
+    if scaling_option == "standard":
+        return StandardScaler()
+    elif scaling_option == "minmax":
+        return MinMaxScaler()
+    else:
+        raise Exception(f"Wrong scaling option give: {scaling_option}!")
+
+
+def plot_vanilla_barchart(data, label):
+    fig = plt.figure(figsize=(10, 5))
+    # creating the bar plot
+    plt.bar(data.keys(), data.values(), color='maroon', width=0.4)
+    plt.title(label)
+    # plt.savefig(f"plots/barchart_{label}.png")
+    plt.show()
 
 
 def main():
-    max_n = 15
+    max_n = None
     load_images = False
     load_jsons = True
     final_data = read_data(load_jsons=load_jsons, load_images=load_images, max_n=max_n)
@@ -324,6 +415,37 @@ def main():
         PetID_list_, PhotoAmt_list_, AdoptionSpeed_list_, texts_list_, magnitudes_list_, scores_list_, languages_list_, \
         categories_list_, color_id_to_color_name_, breed_id_to_breed_name_, breed_id_to_type_, state_id_to_state_name_ = final_data
 
+    """
+    SUMMARY
+    DESCRIPTION
+    
+    Type <class 'int'> 2
+    Name <class 'str'> 9060
+    Age <class 'int'> 106
+    Breed1 <class 'int'> 176
+    Breed2 <class 'int'> 135
+    Gender <class 'int'> 3
+    Color1 <class 'int'> 7
+    Color2 <class 'int'> 7
+    Color3 <class 'int'> 6
+    MaturitySize <class 'int'> 4
+    FurLength <class 'int'> 3
+    Vaccinated <class 'int'> 3
+    Dewormed <class 'int'> 3
+    Sterilized <class 'int'> 3
+    Health <class 'int'> 3
+    Quantity <class 'int'> 19
+    Fee <class 'int'> 74
+    State <class 'int'> 14
+    RescuerID <class 'str'> 5595
+    VideoAmt <class 'int'> 9
+    
+    Description <class 'str'> 14032  # unique
+    PetID <class 'str'> 14993   # unique
+    
+    PhotoAmt <class 'float'> 31
+    AdoptionSpeed <class 'int'> 5
+    """
     Type_list = Type_list_
     Name_list = Name_list_
     Age_list = Age_list_
@@ -351,81 +473,156 @@ def main():
     PhotoAmt_list = PhotoAmt_list_
     AdoptionSpeed_list = AdoptionSpeed_list_
 
+    print("*" * 50)
+    print(VideoAmt_list[:4])
+    print(Description_list[:4])
+    print(PhotoAmt_list[:4])
+
+    print(len(RescuerID_list), len(set(RescuerID_list_)))
+    print(len(PetID_list), len(set(PetID_list)))
+    rescue_id_to_pet_id = dict()
+    for (rescuer_id, pet_id) in zip(RescuerID_list, PetID_list):
+        if rescuer_id not in rescue_id_to_pet_id:
+            rescue_id_to_pet_id[rescuer_id] = [pet_id]
+        else:
+            rescue_id_to_pet_id[rescuer_id].append(pet_id)
+
     texts_list = texts_list_
+    from tqdm import tqdm
+    embeddings = []
+    print(f"Number of texts: {len(texts_list)}")
+    for i, text in tqdm(enumerate(texts_list)):
+        embeddings.append(encode_text(text))
+        if i % 1000 == 0:
+            # print(embeddings[0].shape)
+            # print(np.array(embeddings).shape)
+            np.save(file="data/texts_embeddings.npy", arr=np.array([emb.numpy() for emb in embeddings]), allow_pickle=True)
+    np.save(file="data/texts_embeddings.npy", arr=np.array(embeddings), allow_pickle=True)
+
+    print("Saved texts embeddings")
+
     magnitudes_list = magnitudes_list_
     scores_list = scores_list_
-    languages_list = languages_list_
-    categories_list = categories_list_
+
+    print(scores_list[:5])
+    print(magnitudes_list[:5])
+
+    scores_list = [float(elem) for elem in scores_list]
+    magnitudes_list = [float(elem) for elem in magnitudes_list]
+
+    for elem in scores_list:
+        if isinstance(elem, float) is False and isinstance(elem, int) is False:
+            print(elem, "scores")
+    for elem in magnitudes_list:
+        if isinstance(elem, float) is False and isinstance(elem, int) is False:
+            print(elem, "magnitudes")
+
+    plot_histogram(magnitudes_list, "magnitudes_list", nbins=20, show=True)
+    plot_histogram(scores_list, "scores_list", nbins=20, show=True)
+
+    languages_list = languages_list_  # 4 languages, but english is 99%+
+    categories_list = categories_list_  # all are empty
+
+    categories_list = [cat for cat in categories_list if cat != []]
+    print(f"There are {len(categories_list)} given categories")
+
+    label = "Language distribution among the descriptions of the pets"
+    data = Counter(languages_list)
+    # plot_vanilla_barchart(data, label)
+    print(data, label)
+
 
     color_id_to_color_name = color_id_to_color_name_
     breed_id_to_breed_name = breed_id_to_breed_name_
     breed_id_to_type = breed_id_to_type_
     state_id_to_state_name = state_id_to_state_name_
 
-    # features_list = [Type_list, Name_list, Age_list, Breed1_list, Breed2_list, Gender_list, Color1_list, Color2_list,
-    #                  Color3_list, MaturitySize_list, FurLength_list, Vaccinated_list, Dewormed_list, Sterilized_list,
-    #                  Health_list, Quantity_list, Fee_list, State_list, RescuerID_list, VideoAmt_list, Description_list,
-    #                  PetID_list, PhotoAmt_list, AdoptionSpeed_list]
+    features_list = [Type_list, Name_list, Age_list, Breed1_list, Breed2_list, Gender_list, Color1_list, Color2_list,
+                     Color3_list, MaturitySize_list, FurLength_list, Vaccinated_list, Dewormed_list, Sterilized_list,
+                     Health_list, Quantity_list, Fee_list, State_list, RescuerID_list, VideoAmt_list, Description_list,
+                     PetID_list, PhotoAmt_list, AdoptionSpeed_list]
+
+    ideal_animal = dict()
+    for (feature_name, feature_type, length, set_length, feature_mode, features_types) in zip(all_columns_names,
+                                                                              [type(features[0]) for features in features_list],
+                                                                              [len(features) for features in features_list],
+                                                                              [len(set(features)) for features in features_list],
+                                                                              [mode(features) for features in features_list],
+                                                                              [[type(feat) for feat in features] for features in features_list]):
+        print(feature_name, feature_type, set_length, length, feature_mode)
+        if set_length < length:
+            ideal_animal[feature_name] = feature_mode
+        for feat in features_types:
+            if feat != feature_type:
+                print("Feature mismatch: ", feature_name)
+                break
+
+    exit(0)
+    X, y = [], []
+    X_train, X_test, y_train, y_test = [], [], [], []
+    train = pd.read_csv("data/train/train.csv")
+
+    for i in range(len(train)):
+        datapoint = []
+        for column in list(train.columns):
+            if column not in ["RescuerID", "Description", "PetID", "Name"]:
+                if column == "AdoptionSpeed":
+                    y.append(train.at[i, column])
+                else:
+                    datapoint.append(train.at[i, column])
+        X.append(datapoint)
+
+    X = np.array(X)
+    y = np.array(y)
+
+    # for (feature_name, features) in zip(all_columns_names, features_list):
+
+    scaling_options = ["standard", "minmax"]
+
+    for scaling_option in scaling_options:
+        scaler = load_scaler(scaling_option)
+        if len(X) and len(y):
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+        task = "classification"
+        if task == "classification":
+            model = SVC()
+        elif task == "regression":
+            model = SVR()
+        else:
+            raise Exception(f"Wrong task given: {task}!")
+
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        print("*" * 100)
+        print(f"precision_score: {precision_score(y_pred, y_test)}")
+        print(f"recall_score: {recall_score(y_pred, y_test)}")
+        print(f"f1_score: {f1_score(y_pred, y_test)}")
+        print(f"accuracy_score: {accuracy_score(y_pred, y_test)}")
+        print(f"confusion_matrix: {confusion_matrix(y_pred, y_test)}")
+        print("*" * 50)
+
+        if task == "classification":
+            model = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
+        elif task == "regression":
+            model = LazyRegressor(verbose=0, ignore_warnings=True, custom_metric=None)
+        else:
+            raise Exception(f"Wrong task given: {task}!")
+
+        models, predictions = model.fit(X_train, X_test, y_train, y_test)
+        print(models)
+        print(predictions)
+        print("*" * 50)
+
+    print(ideal_animal)
 
     print("Loaded data.")
     show = False
 
     statistical_analysis(AdoptionSpeed_list, "AdoptionSpeed")
-
-
-    def plot_histogram(values, label, nbins=100, show=True):
-        plt.hist(values, bins=nbins)
-        plt.title(label)
-        plt.savefig(os.path.join("plots", f"histogram_{label}.png"))
-        if show:
-            plt.show()
-
-
-    def plot_scatterplot(xvalues, yvalues, label, show=True):
-        plt.scatter(xvalues, yvalues)
-        plt.title(label)
-        plt.xlabel(label.split("_by_")[0])
-        plt.ylabel(label.split("_by_")[1])
-        plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
-        if show:
-            plt.show()
-
-
-    def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show=True):
-        plt.scatter(xvalues, yvalues, zvalues)
-        plt.title(label)
-        plt.xlabel(label.split("_by_")[0])
-        plt.ylabel(label.split("_by_")[1])
-        plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
-        if show:
-            plt.show()
-
-    nbins = 100
-
-    def plot_barchart(labels, values, label: str, aggregation_strategy: str = "mean", show: bool = True):
-        label_to_average_value = dict()
-        for (label, value) in zip(labels, values):
-            if label not in label_to_average_value:
-                label_to_average_value[label] = [value]
-            else:
-                label_to_average_value[label].append(value)
-        for (label, value) in label_to_average_value.items():
-            if aggregation_strategy == "mean":
-                label_to_average_value[label] = mean(value)
-            elif aggregation_strategy == "sum":
-                label_to_average_value[label] = mean(value)
-            else:
-                raise Exception(f"Wrong aggregation_strategy given: {aggregation_strategy}!")
-
-        keys = label_to_average_value.keys()
-        values = label_to_average_value.values()
-        plt.bar(keys, values, color="red", width=0.4)
-        plt.xlabel(label.split("_by_")[0])
-        plt.ylabel(label.split("_by_")[1])
-        plt.title(label)
-        plt.savefig(os.path.join("plots", f"barchart_{label}.png"))
-        if show:
-            plt.show()
 
     print("All the names: ", set(Name_list))
 
