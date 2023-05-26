@@ -24,6 +24,7 @@ all_columns_names = ['Type', 'Name', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color
 
 
 def plot_histogram(values, label, show, nbins=100):
+    fig = plt.figure(figsize=(9, 6))
     plt.hist(values, bins=nbins)
     plt.title(label)
     plt.savefig(os.path.join("plots", f"histogram_{label}.png"))
@@ -32,6 +33,7 @@ def plot_histogram(values, label, show, nbins=100):
 
 
 def plot_scatterplot(xvalues, yvalues, show, label):
+    fig = plt.figure(figsize=(9, 6))
     plt.scatter(xvalues, yvalues)
     plt.title(label)
     plt.xlabel(label.split("_by_")[0])
@@ -42,6 +44,7 @@ def plot_scatterplot(xvalues, yvalues, show, label):
 
 
 def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show):
+    fig = plt.figure(figsize=(9, 6))
     plt.scatter(xvalues, yvalues, zvalues)
     plt.title(label)
     plt.xlabel(label.split("_by_")[0])
@@ -55,17 +58,19 @@ nbins = 100
 
 
 def plot_barchart(labels, values, label: str, show: bool, aggregation_strategy: str = "mean", ):
+    fig = plt.figure(figsize=(9, 6))
+
     label_to_average_value = dict()
-    for (label, value) in zip(labels, values):
-        if label not in label_to_average_value:
-            label_to_average_value[label] = [value]
+    for (label_, value) in zip(labels, values):
+        if label_ not in label_to_average_value:
+            label_to_average_value[label_] = [value]
         else:
-            label_to_average_value[label].append(value)
-    for (label, value) in label_to_average_value.items():
+            label_to_average_value[label_].append(value)
+    for (label_, value) in label_to_average_value.items():
         if aggregation_strategy == "mean":
-            label_to_average_value[label] = mean(value)
+            label_to_average_value[label_] = mean(value)
         elif aggregation_strategy == "sum":
-            label_to_average_value[label] = mean(value)
+            label_to_average_value[label_] = mean(value)
         else:
             raise Exception(f"Wrong aggregation_strategy given: {aggregation_strategy}!")
 
@@ -81,6 +86,7 @@ def plot_barchart(labels, values, label: str, show: bool, aggregation_strategy: 
 
 
 def statistical_analysis(values, label, show):
+    fig = plt.figure(figsize=(9, 6))
     s = ""
     s += "*" * 50 + "\n"
     s += f"label: {label}" + "\n"
@@ -105,15 +111,14 @@ def read_jsons(filepaths: List[str]):
             datapoints.append(json.load(f))
     return datapoints
 
+
 from sentence_transformers import SentenceTransformer, util
 
 sent_transf_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 
-
 def encode_text(text: str):
     return sent_transf_model.encode(text, convert_to_tensor=True)
-
 
 
 def read_data(load_jsons: bool = False, load_images: bool = False, load_all: bool = False, max_n: int = None,
@@ -146,6 +151,7 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
     # replace nan values
     train = train.fillna(method="ffill")
 
+    fig = plt.figure(figsize=(18, 12))
     corr = train.corr()
     sns.heatmap(corr, cmap="Blues", annot=True)
     plt.savefig("plots/heatmap_correlations_between_variables.png")
@@ -396,6 +402,7 @@ def load_scaler(scaling_option):
 
 
 def plot_vanilla_barchart(data, label):
+    fig = plt.figure(figsize=(9, 6))
     # creating the bar plot
     plt.bar(data.keys(), data.values(), color='maroon', width=0.4)
     plt.title(label)
@@ -404,9 +411,9 @@ def plot_vanilla_barchart(data, label):
 
 
 def main():
-    fig = plt.figure(figsize=(12, 18))
     show = False
-    show_at_the_end = True
+    do_ml = False
+    show_at_the_end = False
     max_n = None
     load_images = False
     load_jsons = True
@@ -494,7 +501,7 @@ def main():
     embeddings = []
     filepath = "data/texts_embeddings.npy"
     if os.path.exists(filepath):
-        embeddings = np.save(file="data/texts_embeddings.npy", allow_pickle=True)
+        embeddings = np.load(file=filepath, allow_pickle=True)
     else:
         print(f"Number of texts: {len(texts_list)}")
         for i, text in tqdm(enumerate(texts_list)):
@@ -503,7 +510,7 @@ def main():
                 # print(embeddings[0].shape)
                 # print(np.array(embeddings).shape)
                 np.save(file=filepath, arr=np.array([emb.numpy() for emb in embeddings]), allow_pickle=True)
-        np.save(file="data/texts_embeddings.npy", arr=np.array(embeddings), allow_pickle=True)
+        np.save(file=filepath, arr=np.array(embeddings), allow_pickle=True)
 
     print("Saved texts embeddings")
 
@@ -549,11 +556,11 @@ def main():
 
     ideal_animal = dict()
     for (feature_name, feature_type, length, set_length, feature_mode, features_types) in zip(all_columns_names,
-                                                                              [type(features[0]) for features in features_list],
-                                                                              [len(features) for features in features_list],
-                                                                              [len(set(features)) for features in features_list],
-                                                                              [mode(features) for features in features_list],
-                                                                              [[type(feat) for feat in features] for features in features_list]):
+                                                                                              [type(features[0]) for features in features_list],
+                                                                                              [len(features) for features in features_list],
+                                                                                              [len(set(features)) for features in features_list],
+                                                                                              [mode(features) for features in features_list],
+                                                                                              [[type(feat) for feat in features] for features in features_list]):
         print(feature_name, feature_type, set_length, length, feature_mode)
         if set_length < length:
             ideal_animal[feature_name] = feature_mode
@@ -562,7 +569,7 @@ def main():
                 print("Feature mismatch: ", feature_name)
                 break
 
-    exit(0)
+    # exit(0)
     X, y = [], []
     X_train, X_test, y_train, y_test = [], [], [], []
     train = pd.read_csv("data/train/train.csv")
@@ -580,53 +587,7 @@ def main():
     X = np.array(X)
     y = np.array(y)
 
-    # for (feature_name, features) in zip(all_columns_names, features_list):
-
-    scaling_options = ["standard", "minmax"]
-
-    for scaling_option in scaling_options:
-        scaler = load_scaler(scaling_option)
-        if len(X) and len(y):
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
-        task = "classification"
-        if task == "classification":
-            model = SVC()
-        elif task == "regression":
-            model = SVR()
-        else:
-            raise Exception(f"Wrong task given: {task}!")
-
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-
-        print("*" * 100)
-        print(f"precision_score: {precision_score(y_pred, y_test)}")
-        print(f"recall_score: {recall_score(y_pred, y_test)}")
-        print(f"f1_score: {f1_score(y_pred, y_test)}")
-        print(f"accuracy_score: {accuracy_score(y_pred, y_test)}")
-        print(f"confusion_matrix: {confusion_matrix(y_pred, y_test)}")
-        print("*" * 50)
-
-        if task == "classification":
-            model = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
-        elif task == "regression":
-            model = LazyRegressor(verbose=0, ignore_warnings=True, custom_metric=None)
-        else:
-            raise Exception(f"Wrong task given: {task}!")
-
-        models, predictions = model.fit(X_train, X_test, y_train, y_test)
-        print(models)
-        print(predictions)
-        print("*" * 50)
-
-    print(ideal_animal)
-
-    print("Loaded data.")
-
-    statistical_analysis(AdoptionSpeed_list, "AdoptionSpeed")
+    statistical_analysis(values=AdoptionSpeed_list, label="AdoptionSpeed", show=show)
 
     print("All the names: ", set(Name_list))
 
@@ -637,7 +598,8 @@ def main():
     plot_scatterplot(Breed2_list, AdoptionSpeed_list, label="Breed2_by_AdoptionSpeed", show=show)
     plot_scatterplot(State_list, AdoptionSpeed_list, label="State_by_AdoptionSpeed", show=show)
 
-    plot_barchart(Gender_list, AdoptionSpeed_list, label="Gender_by_AdoptionSpeed", aggregation_strategy="mean", show=show)
+    plot_barchart(labels=Gender_list, values=AdoptionSpeed_list, label="Gender_by_AdoptionSpeed",
+                  aggregation_strategy="mean", show=show)
     plot_barchart(Color1_list, Type_list, label="Color_by_Type", aggregation_strategy="sum", show=show)
     plot_barchart(Color1_list, AdoptionSpeed_list, label="Color_by_AdoptionSpeed", aggregation_strategy="sum", show=show)
     plot_barchart(Type_list, AdoptionSpeed_list, label="Type_by_AdoptionSpeed", aggregation_strategy="mean", show=show)
@@ -650,21 +612,68 @@ def main():
     plot_histogram(Quantity_list, "Quantity", nbins=nbins, show=show)
     plot_histogram(AdoptionSpeed_list, "AdoptionSpeed", nbins=nbins, show=show)
 
-    print(color_id_to_color_name.values())
-    print(breed_id_to_breed_name.values())
+    # for (feature_name, features) in zip(all_columns_names, features_list):
+
+    scaling_options = ["standard", "minmax"][:1]
+    if do_ml:
+        for scaling_option in scaling_options:
+            scaler = load_scaler(scaling_option)
+            if len(X) and len(y):
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.transform(X_test)
+            task = "classification"
+            if task == "classification":
+                model = SVC()
+            elif task == "regression":
+                model = SVR()
+            else:
+                raise Exception(f"Wrong task given: {task}!")
+
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+
+            print("*" * 100)
+            print(f"precision_score: {precision_score(y_pred, y_test, average='weighted')}")
+            print(f"recall_score: {recall_score(y_pred, y_test, average='weighted')}")
+            print(f"f1_score: {f1_score(y_pred, y_test, average='weighted')}")
+            print(f"accuracy_score: {accuracy_score(y_pred, y_test)}")
+            print(f"confusion_matrix: {confusion_matrix(y_pred, y_test)}")
+            print("*" * 50)
+
+            if task == "classification":
+                model = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
+            elif task == "regression":
+                model = LazyRegressor(verbose=0, ignore_warnings=True, custom_metric=None)
+            else:
+                raise Exception(f"Wrong task given: {task}!")
+
+            models, predictions = model.fit(X_train, X_test, y_train, y_test)
+            print(models)
+            print(predictions)
+            print("*" * 50)
+
+    print(f"ideal_animal: {ideal_animal}")
+
+    print("Loaded data.")
+    print(f"color_id_to_color_name: {color_id_to_color_name.values()}")
+    print(f"breed_id_to_breed_name: {breed_id_to_breed_name.values()}")
     # print(breed_id_to_type.values())
     # print(list(breed_id_to_type.values())[0])
-    print(state_id_to_state_name.values())
+    print(f"state_id_to_state_name: {state_id_to_state_name.values()}")
 
     health_related_features_lists = np.array([Vaccinated_list, Dewormed_list, Sterilized_list, Health_list])
     health_related_features_names = ["Vaccinated", "Dewormed", "Sterilized", "Health"]
     for (health, health_features) in zip(health_related_features_names, [Vaccinated_list, Dewormed_list, Sterilized_list, Health_list]):
         plot_scatterplot(health_features, AdoptionSpeed_list, label=f"{health}_by_AdoptionSpeed", show=show)
 
-    # plot the heatmap
-    import seaborn as sns
-    corr = health_related_features_lists.corr()
-    sns.heatmap(corr, xticklabels=health_related_features_names, yticklabels=health_related_features_names)
+    do_heatmap = False
+    if do_heatmap:
+        # plot the heatmap
+        import seaborn as sns
+        corr = health_related_features_lists.corr()
+        sns.heatmap(corr, xticklabels=health_related_features_names, yticklabels=health_related_features_names)
 
     print(set(Color1_list))
 
@@ -683,8 +692,19 @@ def main():
         Color2_list = [color_id_to_color_name[color] for color in Color2_list]
         Color3_list = [color_id_to_color_name[color] for color in Color3_list]
 
-    if show_on_end:
+        print(f"Breed1_list: {Breed1_list}")
+        print(f"Breed2_list: {Breed2_list}")
+
+        print(f"State_list {State_list}")
+
+        print(f"Color1_list: {Color1_list}")
+        print(f"Color2_list: {Color2_list}")
+        print(f"Color3_list: {Color3_list}")
+
+
+    if show_at_the_end:
         plt.show()
+
 
 if __name__ == "__main__":
     main()
