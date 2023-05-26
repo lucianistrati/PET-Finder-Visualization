@@ -6,6 +6,7 @@ from lazypredict.Supervised import LazyClassifier, LazyRegressor
 from copy import deepcopy
 from typing import List
 from collections import Counter
+from tqdm import tqdm
 
 import seaborn as sns
 import pandas as pd
@@ -22,7 +23,7 @@ all_columns_names = ['Type', 'Name', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color
                      'Fee', 'State', 'RescuerID', 'VideoAmt', 'Description', 'PetID', 'PhotoAmt', 'AdoptionSpeed']
 
 
-def plot_histogram(values, label, nbins=100, show=True):
+def plot_histogram(values, label, show, nbins=100):
     plt.hist(values, bins=nbins)
     plt.title(label)
     plt.savefig(os.path.join("plots", f"histogram_{label}.png"))
@@ -30,7 +31,7 @@ def plot_histogram(values, label, nbins=100, show=True):
         plt.show()
 
 
-def plot_scatterplot(xvalues, yvalues, label, show=True):
+def plot_scatterplot(xvalues, yvalues, show, label):
     plt.scatter(xvalues, yvalues)
     plt.title(label)
     plt.xlabel(label.split("_by_")[0])
@@ -40,7 +41,7 @@ def plot_scatterplot(xvalues, yvalues, label, show=True):
         plt.show()
 
 
-def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show=True):
+def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show):
     plt.scatter(xvalues, yvalues, zvalues)
     plt.title(label)
     plt.xlabel(label.split("_by_")[0])
@@ -53,7 +54,7 @@ def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show=True):
 nbins = 100
 
 
-def plot_barchart(labels, values, label: str, aggregation_strategy: str = "mean", show: bool = True):
+def plot_barchart(labels, values, label: str, show: bool, aggregation_strategy: str = "mean", ):
     label_to_average_value = dict()
     for (label, value) in zip(labels, values):
         if label not in label_to_average_value:
@@ -79,7 +80,7 @@ def plot_barchart(labels, values, label: str, aggregation_strategy: str = "mean"
         plt.show()
 
 
-def statistical_analysis(values, label, show: bool = True):
+def statistical_analysis(values, label, show):
     s = ""
     s += "*" * 50 + "\n"
     s += f"label: {label}" + "\n"
@@ -395,7 +396,6 @@ def load_scaler(scaling_option):
 
 
 def plot_vanilla_barchart(data, label):
-    fig = plt.figure(figsize=(10, 5))
     # creating the bar plot
     plt.bar(data.keys(), data.values(), color='maroon', width=0.4)
     plt.title(label)
@@ -404,6 +404,9 @@ def plot_vanilla_barchart(data, label):
 
 
 def main():
+    fig = plt.figure(figsize=(12, 18))
+    show = False
+    show_at_the_end = True
     max_n = None
     load_images = False
     load_jsons = True
@@ -488,16 +491,19 @@ def main():
             rescue_id_to_pet_id[rescuer_id].append(pet_id)
 
     texts_list = texts_list_
-    from tqdm import tqdm
     embeddings = []
-    print(f"Number of texts: {len(texts_list)}")
-    for i, text in tqdm(enumerate(texts_list)):
-        embeddings.append(encode_text(text))
-        if i % 1000 == 0:
-            # print(embeddings[0].shape)
-            # print(np.array(embeddings).shape)
-            np.save(file="data/texts_embeddings.npy", arr=np.array([emb.numpy() for emb in embeddings]), allow_pickle=True)
-    np.save(file="data/texts_embeddings.npy", arr=np.array(embeddings), allow_pickle=True)
+    filepath = "data/texts_embeddings.npy"
+    if os.path.exists(filepath):
+        embeddings = np.save(file="data/texts_embeddings.npy", allow_pickle=True)
+    else:
+        print(f"Number of texts: {len(texts_list)}")
+        for i, text in tqdm(enumerate(texts_list)):
+            embeddings.append(encode_text(text))
+            if i % 1000 == 0:
+                # print(embeddings[0].shape)
+                # print(np.array(embeddings).shape)
+                np.save(file=filepath, arr=np.array([emb.numpy() for emb in embeddings]), allow_pickle=True)
+        np.save(file="data/texts_embeddings.npy", arr=np.array(embeddings), allow_pickle=True)
 
     print("Saved texts embeddings")
 
@@ -517,8 +523,8 @@ def main():
         if isinstance(elem, float) is False and isinstance(elem, int) is False:
             print(elem, "magnitudes")
 
-    plot_histogram(magnitudes_list, "magnitudes_list", nbins=20, show=True)
-    plot_histogram(scores_list, "scores_list", nbins=20, show=True)
+    plot_histogram(magnitudes_list, "magnitudes_list", nbins=20, show=show)
+    plot_histogram(scores_list, "scores_list", nbins=20, show=show)
 
     languages_list = languages_list_  # 4 languages, but english is 99%+
     categories_list = categories_list_  # all are empty
@@ -530,7 +536,6 @@ def main():
     data = Counter(languages_list)
     # plot_vanilla_barchart(data, label)
     print(data, label)
-
 
     color_id_to_color_name = color_id_to_color_name_
     breed_id_to_breed_name = breed_id_to_breed_name_
@@ -620,7 +625,6 @@ def main():
     print(ideal_animal)
 
     print("Loaded data.")
-    show = False
 
     statistical_analysis(AdoptionSpeed_list, "AdoptionSpeed")
 
@@ -679,6 +683,8 @@ def main():
         Color2_list = [color_id_to_color_name[color] for color in Color2_list]
         Color3_list = [color_id_to_color_name[color] for color in Color3_list]
 
+    if show_on_end:
+        plt.show()
 
 if __name__ == "__main__":
     main()
