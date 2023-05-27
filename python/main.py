@@ -567,7 +567,7 @@ def main():
                                                                                               [len(set(features)) for features in features_list],
                                                                                               [mode(features) for features in features_list],
                                                                                               [[type(feat) for feat in features] for features in features_list]):
-        print(feature_name, feature_type, set_length, length, feature_mode)
+        # print(feature_name, feature_type, set_length, length, feature_mode)
         if set_length < length:
             ideal_animal[feature_name] = feature_mode
         for feat in features_types:
@@ -595,7 +595,7 @@ def main():
 
     statistical_analysis(values=AdoptionSpeed_list, label="AdoptionSpeed", show=show)
 
-    print("All the names: ", set(Name_list))
+    # print("All the names: ", set(Name_list))
 
     plot_scatterplot(Age_list, AdoptionSpeed_list, label="Age_by_AdoptionSpeed", show=show)
     plot_scatterplot(MaturitySize_list, AdoptionSpeed_list, label="MaturitySize_by_AdoptionSpeed", show=show)
@@ -663,11 +663,11 @@ def main():
     print(f"ideal_animal: {ideal_animal}")
 
     print("Loaded data.")
-    print(f"color_id_to_color_name: {color_id_to_color_name.values()}")
-    print(f"breed_id_to_breed_name: {breed_id_to_breed_name.values()}")
+    print(f"color_id_to_color_name: {color_id_to_color_name}")
+    # print(f"breed_id_to_breed_name: {breed_id_to_breed_name}")
     # print(breed_id_to_type.values())
     # print(list(breed_id_to_type.values())[0])
-    print(f"state_id_to_state_name: {state_id_to_state_name.values()}")
+    print(f"state_id_to_state_name: {state_id_to_state_name}")
 
     health_related_features_lists = np.array([Vaccinated_list, Dewormed_list, Sterilized_list, Health_list])
     health_related_features_names = ["Vaccinated", "Dewormed", "Sterilized", "Health"]
@@ -681,10 +681,10 @@ def main():
         corr = health_related_features_lists.corr()
         sns.heatmap(corr, xticklabels=health_related_features_names, yticklabels=health_related_features_names)
 
-    print(set(Color1_list))
-
-    print(set(Color2_list))
-    print(set(Color3_list))
+    # print(set(Color1_list))
+    #
+    # print(set(Color2_list))
+    # print(set(Color3_list))
 
     use_replacement_dicts = False
 
@@ -698,15 +698,14 @@ def main():
         Color2_list = [color_id_to_color_name[color] for color in Color2_list]
         Color3_list = [color_id_to_color_name[color] for color in Color3_list]
 
-        print(f"Breed1_list: {Breed1_list}")
-        print(f"Breed2_list: {Breed2_list}")
-
-        print(f"State_list {State_list}")
-
-        print(f"Color1_list: {Color1_list}")
-        print(f"Color2_list: {Color2_list}")
-        print(f"Color3_list: {Color3_list}")
-
+        # print(f"Breed1_list: {Breed1_list}")
+        # print(f"Breed2_list: {Breed2_list}")
+        #
+        # print(f"State_list {State_list}")
+        #
+        # print(f"Color1_list: {Color1_list}")
+        # print(f"Color2_list: {Color2_list}")
+        # print(f"Color3_list: {Color3_list}")
 
     if show_at_the_end:
         plt.show()
