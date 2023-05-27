@@ -27,6 +27,7 @@ def plot_histogram(values, label, show, nbins=100):
     fig = plt.figure(figsize=(9, 6))
     plt.hist(values, bins=nbins)
     plt.title(label)
+    plt.legend()
     plt.savefig(os.path.join("plots", f"histogram_{label}.png"))
     if show:
         plt.show()
@@ -49,6 +50,7 @@ def plot_scatterplot_3D(xvalues, yvalues, zvalues, label, show):
     plt.title(label)
     plt.xlabel(label.split("_by_")[0])
     plt.ylabel(label.split("_by_")[1])
+    plt.legend()
     plt.savefig(os.path.join("plots", f"scatterplot_{label}.png"))
     if show:
         plt.show()
@@ -80,6 +82,7 @@ def plot_barchart(labels, values, label: str, show: bool, aggregation_strategy: 
     plt.xlabel(label.split("_by_")[0])
     plt.ylabel(label.split("_by_")[1])
     plt.title(label)
+    plt.legend()
     plt.savefig(os.path.join("plots", f"barchart_{label}.png"))
     if show:
         plt.show()
@@ -96,6 +99,7 @@ def statistical_analysis(values, label, show):
 
     plt.boxplot(values)
     plt.title(label)
+    plt.legend()
     plt.savefig(f"plots/statistical_analysis_boxplot_{label}.png")
     if show:
         plt.show()
@@ -154,6 +158,7 @@ def read_data(load_jsons: bool = False, load_images: bool = False, load_all: boo
     fig = plt.figure(figsize=(18, 12))
     corr = train.corr()
     sns.heatmap(corr, cmap="Blues", annot=True)
+    plt.legend()
     plt.savefig("plots/heatmap_correlations_between_variables.png")
     if show:
         plt.show()
@@ -406,6 +411,7 @@ def plot_vanilla_barchart(data, label):
     # creating the bar plot
     plt.bar(data.keys(), data.values(), color='maroon', width=0.4)
     plt.title(label)
+    plt.legend()
     # plt.savefig(f"plots/barchart_{label}.png")
     plt.show()
 
